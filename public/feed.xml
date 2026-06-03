@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>SSHCMS Feed</title>
+  <link href="ssh://sshcms/feed" />
+  <updated>2026-06-02T18:24:05.191755</updated>
+  <id>tag:sshcms.local,2026:feed</id>
+  <entry>
+    <title>Hello World</title>
+    <link href="ssh://sshcms/posts/hello" />
+    <updated>2026-06-02T18:22:42.950906</updated>
+    <id>tag:sshcms.local,2026:hello-world</id>
+    <summary># Hello World
+
+This is the first post in my SSHCMS.
+
+- [[index|Home]]
+...</summary>
+  </entry>
+</feed>

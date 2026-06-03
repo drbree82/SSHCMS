@@ -1,0 +1,66 @@
+SSHCMS – Revision and Fixes List
+
+This list summarises the issues found when testing the initial Gemma‑generated SSHCMS project and proposes concrete fixes and improvements. These items should help guide the next iteration of the code.
+
+1. Entry points & CLI
+Missing main() function in app.py – the [pyproject.toml][project] defines an entry point sshcms = "sshcms.app:main", but there is no main() in app.py. As a result, running uv run sshcms or python -m sshcms.app fails.
+Fix: define a main() function in sshcms/app.py that parses the optional starting path and launches SSHCMSApp. Alternatively, change the script entry in the TOML to point directly at a suitable callable (e.g. sshcms.app:SSHCMSApp).
+Wrong script names in README – the README instructs users to run uv run python -m sshcms.app and uv run sshcms-render, but [project.scripts] actually defines sshcms, sshcms‑agent and sshcms‑feed.
+Fix: update the usage section of the README to match the actual script names: e.g. uv run sshcms to launch the TUI, uv run sshcms-agent /path for agent mode, and uv run sshcms-feed to generate the Atom feed.
+No --agent / --page flag – the original spec suggested running uv run sshcms --agent /about or similar. The current code offers separate sshcms-agent and sshcms-feed scripts instead.
+Fix (optional): either document the existing script names clearly or add argument parsing in app.py to support a --agent flag that calls agent.main() when requested.
+2. Content path resolution
+
+Relative site_dir breaks when run from outside the repository – ContentManager defaults to site_dir='site'. When the CLI is run from any directory other than the project root, the content can’t be found. This caused sshcms.agent and sshcms.render to report “Page not found” or “No posts directory found” during testing.
+Fix: detect if site_dir is relative and, if so, resolve it relative to the module location:
+
+class ContentManager:
+    def __init__(self, site_dir: str = "site"):
+        if not os.path.isabs(site_dir):
+            base = Path(__file__).resolve().parent.parent  # directory containing sshcms package
+            self.site_dir = (base / site_dir).resolve()
+        else:
+            self.site_dir = Path(site_dir).resolve()
+
+Optionally, allow --site-dir on the CLI to override this default.
+
+Path traversal vulnerability – resolve_path() naïvely appends .md to whatever the user passes, so get_page('/../../../../etc/passwd') attempts to read a file outside of site.
+Fix: normalise the path and ensure it stays within site_dir. For example:
+
+def resolve_path(self, path: str) -> Path:
+    # strip leading slash and add .md if needed
+    rel = Path(path.lstrip("/")).with_suffix('.md')
+    full = (self.site_dir / rel).resolve()
+    if not str(full).startswith(str(self.site_dir.resolve())):
+        return self.site_dir / "index.md"
+    return full
+3. TUI rendering issues
+
+Wiki links are shown verbatim – the Textual Markdown widget currently displays [[Page|Label]] literally. To make wiki links meaningful in the TUI, convert them to real Markdown links before rendering. You can use the existing WikiParser.render_wiki_links():
+
+from .parser import WikiParser
+content_md = WikiParser.render_wiki_links(content_text,
+    lambda tgt, label: f"[{label}]({tgt})")
+self.query_one("#content-view", Markdown).update(content_md)
+No handling of ssh:// and https:// links – the sidebar only lists local links and silently ignores remote links. For a better UX, consider listing remote links with a different prefix or colour and printing a message instructing the user to open them externally when selected.
+Search overlay – the CSS defines a #search-overlay but nothing actually toggles it. The search currently filters the sidebar in place but provides no visual cue when search mode is active. Either remove the unused #search-overlay or implement a proper overlay.
+Missing textual dependency – the project requires the textual library (at least version 0.50.0 according to pyproject.toml). Testing failed because this dependency isn’t installed in the current environment. Document that textual must be installed (e.g. via pip install textual) or provide a lock file and uv instructions.
+4. Agent & feed behaviour
+Agent cannot find pages when run outside the project root – due to the relative site_dir, sshcms-agent /about returns “Page not found” unless it is executed from within the project directory. This will be fixed by making ContentManager resolve site_dir relative to its module.
+No absolute paths in output – the agent currently returns href fields exactly as they appear in the wiki syntax. For local pages you might standardise them (ensure a leading / and no .md suffix) so that agents get stable identifiers.
+Atom feed generation is brittle – generate_feed() writes public/feed.xml relative to the current working directory, prints “No posts directory found” if run from the wrong location, and concatenates XML manually without escaping special characters.
+Fixes:
+Use the same ContentManager fix for site_dir so posts are found regardless of the working directory.
+Use xml.sax.saxutils.escape() or xml.etree.ElementTree to escape title and summary before inserting into the XML.
+Write the feed into public/ relative to the package base instead of the current directory.
+5. State management
+StateManager is unused – although there is a StateManager with session and user state support, it isn’t currently used by the TUI or agent. At minimum the TUI could create a session on startup and record the requested path, username and SSH key fingerprint for auditing. Consider integrating StateManager.create_session() in main() and passing a session ID to the app.
+6. Documentation improvements
+Clarify running instructions – update the README’s installation and usage steps. Use uv sync to set up dependencies and then run the entry points exactly as defined in pyproject.toml. Document how to add content to site/, the wiki link syntax, and how to generate the feed.
+Specify OpenSSH deployment – the spec suggests using ForceCommand to run the app over SSH. Include a sample sshd_config snippet in the README and describe how to set up an SSH user whose shell is sshcms.
+7. Optional enhancements
+Handling headings as anchors – the agent currently returns an anchors list but the TUI does nothing with it. Consider adding anchor navigation (e.g., pressing Tab to cycle through headings or listing them in a separate pane).
+Better handling of non‑Markdown files – at present list_pages() returns every .md file under site/. If other file types or front matter are added later, consider ignoring unsupported files or adding front‑matter parsing.
+Future protocol work – the current MVP does not implement the SSH link protocol or handle human vs agent negotiation. These can be deferred, but the code should remain simple enough to evolve.
+
+Implementing the above fixes will make the project runnable from anywhere, match the pyproject.toml definitions, remove obvious errors and security issues, and improve user experience in both the TUI and agent modes.

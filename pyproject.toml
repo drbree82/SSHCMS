@@ -1,0 +1,21 @@
+[project]
+name = "sshcms"
+version = "0.1.0"
+description = "A terminal-first CMS served over SSH"
+dependencies = [
+    "textual>=0.50.0",
+    "markdown>=3.5.0",
+    "pyyaml>=6.0",
+]
+readme = "README.md"
+license = {text = "GPL-3.0-only"}
+requires-python = ">=3.10"
+
+[project.scripts]
+sshcms = "sshcms.app:main"
+sshcms-agent = "sshcms.agent:main"
+sshcms-feed = "sshcms.render:generate_feed"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
