@@ -19,3 +19,8 @@ sshcms-feed = "sshcms.render:generate_feed"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
