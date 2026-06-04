@@ -18,3 +18,17 @@ def test_extract_headings():
     assert headings[0] == {'id': 'main-title', 'label': 'Main Title', 'level': 1}
     assert headings[1] == {'id': 'sub-heading', 'label': 'Sub Heading', 'level': 2}
     assert headings[2] == {'id': 'small-heading', 'label': 'Small Heading', 'level': 3}
+
+def test_parser_edge_cases():
+    # Local wiki link
+    assert WikiParser.parse_links("[[about]]")[0] == {'href': '/about', 'label': 'about', 'type': 'local'}
+    
+    # Labelled local wiki link
+    assert WikiParser.parse_links("[[posts/hello|Hello Post]]")[0] == {'href': '/posts/hello', 'label': 'Hello Post', 'type': 'local'}
+    
+    # SSH link
+    assert WikiParser.parse_links("[[ssh://terminal.shop|Terminal Shop]]")[0] == {'href': 'ssh://terminal.shop', 'label': 'Terminal Shop', 'type': 'ssh'}
+    
+    # HTTPS link
+    assert WikiParser.parse_links("[[https://example.com|Example]]")[0] == {'href': 'https://example.com', 'label': 'Example', 'type': 'web'}
+    
