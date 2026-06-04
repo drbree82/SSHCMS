@@ -53,8 +53,8 @@ class WikiParser:
             if line.startswith('#'):
                 level = len(line) - len(line.lstrip('#'))
                 title = line.lstrip('#').strip()
-                # Create a simple ID: lowercase, replace spaces with hyphens
-                heading_id = title.lower().replace(' ', '-')
+                # Create a simple ID: lowercase, remove punctuation, replace spaces with hyphens
+                heading_id = re.sub(r'[^a-z0-9]+', '-', title.lower()).strip('-')
                 headings.append({
                     'id': heading_id,
                     'label': title,

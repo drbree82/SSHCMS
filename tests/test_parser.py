@@ -19,6 +19,12 @@ def test_extract_headings():
     assert headings[1] == {'id': 'sub-heading', 'label': 'Sub Heading', 'level': 2}
     assert headings[2] == {'id': 'small-heading', 'label': 'Small Heading', 'level': 3}
 
+def test_extract_headings_punctuation():
+    text = "## Hello, World!"
+    headings = WikiParser.extract_headings(text)
+    assert len(headings) == 1
+    assert headings[0] == {'id': 'hello-world', 'label': 'Hello, World!', 'level': 2}
+
 def test_parser_edge_cases():
     # Local wiki link
     assert WikiParser.parse_links("[[about]]")[0] == {'href': '/about', 'label': 'about', 'type': 'local'}
