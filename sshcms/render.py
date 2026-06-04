@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from datetime import datetime
-from xml.sax.saxutils import escape
+import xml.etree.ElementTree as ET
 from .content import ContentManager
 
 def generate_feed():
@@ -17,38 +17,43 @@ def generate_feed():
         path = "/" + str(post_file.relative_to(cm.site_dir).with_suffix('')).replace(os.sep, '/')
         page = cm.get_page(path)
         if page:
-            # Use file mtime as date
+            title = page.get('title')
+            content = page.get('content')
+            if not title or not content:
+                continue
+                
             mtime = post_file.stat().st_mtime
             date = datetime.fromtimestamp(mtime).isoformat()
             posts.append({
-                'title': page['title'],
-                'link': f"ssh://sshcms{path}", # Placeholder for SSH link
+                'title': title,
+                'link': f"ssh://sshcms{path}",
                 'date': date,
-                'content': page['content'][:200] + "..."
+                'content': content[:200] + "...",
+                'mtime': mtime,
+                'path': path
             })
 
-    # Sort posts by date descending
-    posts.sort(key=lambda x: x['date'], reverse=True)
+    posts.sort(key=lambda x: (-x['mtime'], x['path']))
 
-    atom_feed = f'''<?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom">
-  <title>{escape("SSHCMS Feed")}</title>
-  <link href="ssh://sshcms/feed" />
-  <updated>{datetime.now().isoformat()}</updated>
-  <id>tag:sshcms.local,2026:feed</id>
-'''
+    feed = ET.Element('feed', {'xmlns': 'http://www.w3.org/2005/Atom'})
+    ET.SubElement(feed, 'title').text = "SSHCMS Feed"
+    ET.SubElement(feed, 'link', {'href': 'ssh://sshcms/feed'})
+    ET.SubElement(feed, 'updated').text = datetime.now().isoformat()
+    ET.SubElement(feed, 'id').text = "tag:sshcms.local,2026:feed"
+
     for post in posts:
-        atom_feed += f'''  <entry>
-    <title>{escape(post['title'])}</title>
-    <link href="{escape(post['link'])}" />
-    <updated>{post['date']}</updated>
-    <id>tag:sshcms.local,2026:{escape(post['title'].lower().replace(' ', '-'))}</id>
-    <summary>{escape(post['content'])}</summary>
-  </entry>
-'''
-    atom_feed += "</feed>"
+        entry = ET.SubElement(feed, 'entry')
+        ET.SubElement(entry, 'title').text = post['title']
+        ET.SubElement(entry, 'link', {'href': post['link']})
+        ET.SubElement(entry, 'updated').text = post['date']
+        
+        entry_id = f"tag:sshcms.local,2026:{post['path'].strip('/').replace('/', '-')}"
+        ET.SubElement(entry, 'id').text = entry_id
+        ET.SubElement(entry, 'summary').text = post['content']
 
-    # Write to public/ relative to the package base
+    ET.indent(feed)
+    atom_feed = '<?xml version="1.0" encoding="utf-8"?>\n' + ET.tostring(feed, encoding='utf-8').decode('utf-8')
+
     base_dir = Path(__file__).resolve().parent.parent
     public_dir = base_dir / "public"
     public_dir.mkdir(exist_ok=True)
