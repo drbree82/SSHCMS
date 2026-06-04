@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, MagicMock, mock_open
 from sshcms.render import generate_feed
 
-def test_generate_feed_no_crash():
+def test_generate_feed():
     with patch('sshcms.render.ContentManager') as mock_cm_class, \
          patch('sshcms.render.Path.mkdir'), \
          patch('builtins.open', mock_open()) as mocked_file:
@@ -29,8 +29,15 @@ def test_generate_feed_no_crash():
         
         mock_cm_class.return_value = mock_cm
         
-        # This should run without crashing
         generate_feed()
         
         # Verify that open was called to write the feed
-        mocked_file.assert_called()
+        handle = mocked_file()
+        handle.write.assert_called()
+        
+        # Verify content of the feed
+        written_content = handle.write.call_args[0][0]
+        assert '<feed' in written_content
+        assert '<entry' in written_content
+        assert 'Test Post' in written_content
+        assert 'Test content' in written_content
