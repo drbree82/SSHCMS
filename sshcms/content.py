@@ -66,9 +66,15 @@ class ContentManager:
     def list_pages(self) -> List[str]:
         pages = []
         for path in self.site_dir.rglob("*.md"):
-            # Convert file path to URL path
-            rel_path = path.relative_to(self.site_dir).with_suffix('')
-            url_path = "/" + str(rel_path).replace(os.sep, '/').replace('index', '')
+            rel_path = path.relative_to(self.site_dir)
+            if rel_path.stem == 'index':
+                parent_str = str(rel_path.parent).replace(os.sep, '/')
+                if parent_str == '.':
+                    parent_str = ''
+                url_path = "/" + parent_str
+            else:
+                url_path = "/" + str(rel_path.with_suffix('')).replace(os.sep, '/')
+            
             if url_path == "//":
                 url_path = "/"
             pages.append(url_path)
