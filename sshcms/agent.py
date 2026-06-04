@@ -12,12 +12,11 @@ def run_agent(path: str = "/"):
         sys.exit(1)
 
     output = {
-        'type': 'page',
         'path': page['path'],
         'title': page['title'],
-        'content_text': page['content'],
+        'content': page['content'],
         'links': page['links'],
-        'anchors': [{'id': h['id'], 'label': h['label']} for h in page['headings']]
+        'headings': [{'id': h['id'], 'label': h['label']} for h in page['headings']]
     }
 
     print(yaml.dump(output, sort_keys=False))
