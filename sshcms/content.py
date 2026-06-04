@@ -12,7 +12,7 @@ class ContentManager:
             # Resolve relative to project root (parent of sshcms package)
             self.site_dir = (Path(__file__).parent.parent / path).resolve()
 
-    def resolve_path(self, path: str) -> Path:
+    def resolve_path(self, path: str) -> Optional[Path]:
         if path == "/" or not path:
             return self.site_dir / "index.md"
         
@@ -22,16 +22,18 @@ class ContentManager:
             rel_path += ".md"
         
         # Secure path resolution to prevent traversal
-        target_path = (self.site_dir / rel_path).resolve()
-        if not target_path.is_relative_to(self.site_dir):
-            return self.site_dir / "index.md"
-            
-        return target_path
+        try:
+            target_path = (self.site_dir / rel_path).resolve()
+            if not target_path.is_relative_to(self.site_dir):
+                return None
+            return target_path
+        except (OSError, RuntimeError):
+            return None
 
     def get_page(self, path: str) -> Optional[Dict[str, Any]]:
         file_path = self.resolve_path(path)
         
-        if not file_path.exists():
+        if file_path is None or not file_path.exists():
             return None
         
         with open(file_path, 'r', encoding='utf-8') as f:

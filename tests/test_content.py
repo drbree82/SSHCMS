@@ -23,9 +23,9 @@ def test_resolve_path(site_dir):
 def test_path_traversal(site_dir):
     cm = ContentManager(site_dir=str(site_dir))
     # Attempt to traverse out of site_dir
-    assert cm.resolve_path("/../secret.txt") == site_dir / "index.md"
-    assert cm.resolve_path("/posts/../../secret.txt") == site_dir / "index.md"
-    assert cm.resolve_path("/about/../../etc/passwd") == site_dir / "index.md"
+    assert cm.resolve_path("/../secret.txt") is None
+    assert cm.resolve_path("/posts/../../secret.txt") is None
+    assert cm.resolve_path("/about/../../etc/passwd") is None
 
 def test_get_page(site_dir):
     cm = ContentManager(site_dir=str(site_dir))
