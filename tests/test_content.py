@@ -23,8 +23,9 @@ def test_resolve_path(site_dir):
 def test_path_traversal(site_dir):
     cm = ContentManager(site_dir=str(site_dir))
     # Attempt to traverse out of site_dir
-    resolved = cm.resolve_path("/../secret.txt")
-    assert resolved == site_dir / "index.md"
+    assert cm.resolve_path("/../secret.txt") == site_dir / "index.md"
+    assert cm.resolve_path("/posts/../../secret.txt") == site_dir / "index.md"
+    assert cm.resolve_path("/about/../../etc/passwd") == site_dir / "index.md"
 
 def test_get_page(site_dir):
     cm = ContentManager(site_dir=str(site_dir))
@@ -33,6 +34,7 @@ def test_get_page(site_dir):
     assert page is not None
     assert page['title'] == "About"
     assert "About me." in page['content']
+    assert page['path'] == "/about"
     
     assert cm.get_page("/nonexistent") is None
 
