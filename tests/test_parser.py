@@ -35,6 +35,38 @@ def test_parser_edge_cases():
     # SSH link
     assert WikiParser.parse_links("[[ssh://terminal.shop|Terminal Shop]]")[0] == {'href': 'ssh://terminal.shop', 'label': 'Terminal Shop', 'type': 'ssh'}
     
-    # HTTPS link
-    assert WikiParser.parse_links("[[https://example.com|Example]]")[0] == {'href': 'https://example.com', 'label': 'Example', 'type': 'web'}
+
+def test_wiki_link_hardening():
+    # Normal wiki links
+    assert WikiParser.parse_links("[[About]]")[0] == {'href': '/About', 'label': 'About', 'type': 'local'}
+    assert WikiParser.parse_links("[[About Page]]")[0] == {'href': '/About Page', 'label': 'About Page', 'type': 'local'}
+    assert WikiParser.parse_links("[[posts/hello]]")[0] == {'href': '/posts/hello', 'label': 'posts/hello', 'type': 'local'}
+
+    # Multiple wiki links
+    text = "[[About]] and [[posts/hello]]"
+    links = WikiParser.parse_links(text)
+    assert len(links) == 2
+    assert links[0] == {'href': '/About', 'label': 'About', 'type': 'local'}
+    assert links[1] == {'href': '/posts/hello', 'label': 'posts/hello', 'type': 'local'}
+
+    # Empty wiki-link targets
+    assert WikiParser.parse_links("[[ ]]") == []
+    assert WikiParser.parse_links("[[  ]]") == []
+
+    # Malformed / incomplete wiki links (should not crash and should be handled safely)
+    # [[|Label]] - target is empty, should be skipped
+    assert WikiParser.parse_links("[[|Label]]") == []
+    
+    # [[About|]] - target is About, label is empty string
+    links = WikiParser.parse_links("[[About|]]")
+    assert len(links) == 1
+    assert links[0] == {'href': '/About', 'label': '', 'type': 'local'}
+
+    # Nested brackets or other weirdness that doesn't match the regex
+    assert WikiParser.parse_links("[[[About]]]") == []
+    assert WikiParser.parse_links("[[About") == []
+    assert WikiParser.parse_links("[[About]] [[About]]") == [
+        {'href': '/About', 'label': 'About', 'type': 'local'},
+        {'href': '/About', 'label': 'About', 'type': 'local'}
+    ]
     

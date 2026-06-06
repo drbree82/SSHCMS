@@ -5,14 +5,16 @@ class WikiParser:
     # Regex for [[Page]] or [[Page|Label]]
     # Group 1: Page/URL
     # Group 2: |Label (optional)
-    WIKI_LINK_PATTERN = re.compile(r'\[\[([^\]|]+)(?:\|([^\]]+))?\]\]')
+    WIKI_LINK_PATTERN = re.compile(r'(?<!\[)\[\[([^\]|\[]+)(?:\|([^\]]*))?\]\]')
 
     @staticmethod
     def parse_links(text: str) -> List[Dict[str, Any]]:
         links = []
         for match in WikiParser.WIKI_LINK_PATTERN.finditer(text):
             target = match.group(1).strip()
-            label = match.group(2).strip() if match.group(2) else target
+            if not target:
+                continue
+            label = match.group(2).strip() if match.group(2) is not None else target
             
             if target.startswith('ssh://'):
                 link_type = 'ssh'
